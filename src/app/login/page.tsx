@@ -3,12 +3,10 @@
 import { useState } from "react";
 import { GraduationCap, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
+const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -23,13 +21,16 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      setError("メールアドレスまたはパスワードが正しくありません");
+      if (error.message === "Email not confirmed") {
+        setError("メールアドレスの確認が完了していません。登録時に送信した確認メールのリンクをクリックしてからログインしてください。");
+      } else {
+        setError("メールアドレスまたはパスワードが正しくありません");
+      }
       setLoading(false);
       return;
     }
 
-    router.push("/");
-    router.refresh();
+    window.location.href = "/";
   };
 
   return (

@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const { pathname } = req.nextUrl;
 
+  // セッション確認用（anon キー + クッキー）
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,6 +25,12 @@ export async function middleware(req: NextRequest) {
     }
   );
 
+  // DB 参照用（サービスロールキー — RLS をバイパス）
+  const adminDb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
   const { data: { user } } = await supabase.auth.getUser();
 
   // ============================================================
@@ -32,8 +40,7 @@ export async function middleware(req: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL("/portal/login", req.url));
     }
-    // 保護者ユーザーかチェック
-    const { data: guardian } = await supabase
+    const { data: guardian } = await adminDb
       .from("guardians")
       .select("id")
       .eq("auth_id", user.id)
@@ -54,7 +61,7 @@ export async function middleware(req: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL("/login", req.url));
     }
-    const { data: studioUser } = await supabase
+    const { data: studioUser } = await adminDb
       .from("studio_users")
       .select("id")
       .eq("auth_id", user.id)
@@ -65,12 +72,20 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ログイン済みでログイン画面に来たらリダイレクト
+  // ログイン済みでログイン画面に来たらリダイレクト（studio_users が存在する場合のみ）
   if (user && (pathname === "/login" || pathname === "/signup")) {
-    return NextResponse.redirect(new URL("/", req.url));
+    const { data: studioUser } = await adminDb
+      .from("studio_users")
+      .select("id")
+      .eq("auth_id", user.id)
+      .maybeSingle();
+    if (studioUser) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
   }
+
   if (user && pathname === "/portal/login") {
-    const { data: guardian } = await supabase
+    const { data: guardian } = await adminDb
       .from("guardians")
       .select("id")
       .eq("auth_id", user.id)
