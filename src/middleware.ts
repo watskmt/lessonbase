@@ -28,7 +28,7 @@ export async function middleware(req: NextRequest) {
   // DB 参照用（サービスロールキー — RLS をバイパス）
   const adminDb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SECRET_KEY!
   );
 
   const { data: { user } } = await supabase.auth.getUser();

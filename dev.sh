@@ -31,7 +31,7 @@ if [ ! -f ".env.local" ]; then
   echo ""
   echo -e "  ${CYAN}NEXT_PUBLIC_SUPABASE_URL${NC}       → Supabase プロジェクト URL"
   echo -e "  ${CYAN}NEXT_PUBLIC_SUPABASE_ANON_KEY${NC}  → Supabase anon key"
-  echo -e "  ${CYAN}SUPABASE_SERVICE_ROLE_KEY${NC}      → Supabase service role key"
+  echo -e "  ${CYAN}SUPABASE_SECRET_KEY${NC}      → Supabase service role key"
   echo -e "  ${CYAN}PAYJP_WEBHOOK_SECRET${NC}           → PAY.JP Webhook シークレット"
   echo -e "  ${CYAN}RESEND_API_KEY${NC}                 → Resend API キー (re_...)"
   echo -e "  ${CYAN}CRON_SECRET${NC}                    → 任意の文字列 (例: dev-secret-123)"
@@ -62,7 +62,7 @@ MISSING=()
 for key in \
   NEXT_PUBLIC_SUPABASE_URL \
   NEXT_PUBLIC_SUPABASE_ANON_KEY \
-  SUPABASE_SERVICE_ROLE_KEY; do
+  SUPABASE_SECRET_KEY; do
   check_env "$key" || MISSING+=("$key")
 done
 

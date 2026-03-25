@@ -1,0 +1,67 @@
+name: Deploy to CoreServer
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env.local
+        run: |
+          cat << 'EOF' > .env.local
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SECRET_KEY=${{ secrets.SUPABASE_SECRET_KEY }}
+          RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
+          NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
+          PAYJP_WEBHOOK_SECRET=${{ secrets.PAYJP_WEBHOOK_SECRET }}
+          CRON_SECRET=${{ secrets.CRON_SECRET }}
+          EOF
+
+      - name: Build
+        run: npm run build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.CORESERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.CORESERVER_PORT || 22 }} ${{ secrets.CORESERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy via rsync
+        run: |
+          rsync -avz --delete \
+            -e "ssh -p ${{ secrets.CORESERVER_PORT || 22 }} -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            .next/ \
+            public/ \
+            package.json \
+            package-lock.json \
+            next.config.ts \
+            .env.local \
+            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }}:${{ secrets.CORESERVER_PATH }}/
+
+      - name: Install production dependencies & restart
+        run: |
+          ssh -p ${{ secrets.CORESERVER_PORT || 22 }} \
+            -i ~/.ssh/id_rsa \
+            -o StrictHostKeyChecking=no \
+            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} \
+            "cd ${{ secrets.CORESERVER_PATH }} && npm ci --omit=dev && pm2 restart lessonbase || pm2 start npm --name lessonbase -- start"
