@@ -64,4 +64,4 @@ jobs:
             -i ~/.ssh/id_rsa \
             -o StrictHostKeyChecking=no \
             ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} \
-            "bash -lc 'source ~/.nvm/nvm.sh && npm install -g pm2 --no-fund --no-audit && cd ${{ secrets.CORESERVER_PATH }} && npm ci --omit=dev && pm2 restart lessonbase || pm2 start npm --name lessonbase -- start'"
+            "bash -lc '[ -f ~/.nvm/nvm.sh ] || curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash; source ~/.nvm/nvm.sh; nvm install 20 --no-progress; nvm use 20; npm install -g pm2 --no-fund --no-audit; cd ${{ secrets.CORESERVER_PATH }} && npm ci --omit=dev && (pm2 restart lessonbase || pm2 start npm --name lessonbase -- start)'"
