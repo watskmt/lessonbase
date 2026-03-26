@@ -81,7 +81,7 @@ jobs:
           NODE_HOME="$HOME/.nodejs"
           if [ ! -x "$NODE_HOME/bin/node" ]; then
             VER=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -oE 'node-v24\.[0-9]+\.[0-9]+-linux-x64' | head -1)
-            curl -fsSL "https://nodejs.org/dist/latest-v24.x/${VER}.tar.xz" | tar xJ -C "$HOME"
+            curl -fsSL "https://nodejs.org/dist/latest-v24.x/${VER}.tar.gz" | tar xz -C "$HOME"
             mv "$HOME/${VER}" "$NODE_HOME"
           fi
           export PATH="$NODE_HOME/bin:$PATH"
