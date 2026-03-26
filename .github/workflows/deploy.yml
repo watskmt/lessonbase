@@ -76,5 +76,18 @@ jobs:
           ssh -p ${{ secrets.CORESERVER_PORT || 22 }} \
             -i ~/.ssh/id_rsa \
             -o StrictHostKeyChecking=no \
-            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} \
-            "bash -lc 'export PATH=$(ls -d $HOME/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1):$PATH; npm install -g pm2 --no-fund --no-audit; cd ${{ secrets.CORESERVER_PATH }} && npm ci --omit=dev && pm2 kill 2>/dev/null; pm2 start npm --name lessonbase -- start'"
+            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} << 'EOF'
+          set -e
+          NODE_HOME="$HOME/.nodejs"
+          if [ ! -x "$NODE_HOME/bin/node" ]; then
+            VER=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -oE 'node-v24\.[0-9]+\.[0-9]+-linux-x64' | head -1)
+            curl -fsSL "https://nodejs.org/dist/latest-v24.x/${VER}.tar.xz" | tar xJ -C "$HOME"
+            mv "$HOME/${VER}" "$NODE_HOME"
+          fi
+          export PATH="$NODE_HOME/bin:$PATH"
+          npm install -g pm2 --no-fund --no-audit
+          cd ${{ secrets.CORESERVER_PATH }}
+          npm ci --omit=dev
+          pm2 kill 2>/dev/null || true
+          pm2 start npm --name lessonbase -- start
+          EOF
