@@ -44,14 +44,24 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -p ${{ secrets.CORESERVER_PORT || 22 }} ${{ secrets.CORESERVER_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Create .htaccess
+        run: |
+          cat << 'EOF' > .htaccess
+          Options -MultiViews
+          RewriteEngine On
+          RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
+          EOF
+
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
             -e "ssh -p ${{ secrets.CORESERVER_PORT || 22 }} -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
             --exclude='.git' \
             --exclude='node_modules' \
-            .next/ \
-            public/ \
+            --exclude='.next/cache' \
+            .htaccess \
+            .next \
+            public \
             package.json \
             package-lock.json \
             next.config.ts \
