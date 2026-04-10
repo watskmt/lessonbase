@@ -3,6 +3,14 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(req: NextRequest) {
+  // HTTP → HTTPS リダイレクト
+  const proto = req.headers.get("x-forwarded-proto");
+  if (proto === "http") {
+    const url = req.nextUrl.clone();
+    url.protocol = "https:";
+    return NextResponse.redirect(url, { status: 301 });
+  }
+
   const res = NextResponse.next();
   const { pathname } = req.nextUrl;
 

@@ -52,13 +52,6 @@ jobs:
           cat << 'EOF' > .htaccess
           Options -MultiViews
           RewriteEngine On
-
-          # HTTP → HTTPS リダイレクト（SSL終端がプロキシ側の場合も考慮）
-          RewriteCond %{HTTPS} off
-          RewriteCond %{HTTP:X-Forwarded-Proto} !https
-          RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
-
-          # HTTPS → Node.js リバースプロキシ
           RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
           EOF
 
