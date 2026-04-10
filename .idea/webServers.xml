@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="6ead9b39-202c-4ee7-bc3d-8c0752e3f562" name="coreserver" url="http://lessonbase.watarusakamoto.com">
+        <fileTransfer rootFolder="/home/watskmt/domains/lessonbase.watarusakamoto.com/public_html" accessType="SFTP" host="v2012.coreserver.jp" port="22" sshConfigId="a1b1edb5-2565-4af2-b202-23eaddef8c1c" sshConfig="watskmt@v2012.coreserver.jp:22 key" keyPair="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

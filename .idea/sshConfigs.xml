@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig host="v2012.coreserver.jp" id="a1b1edb5-2565-4af2-b202-23eaddef8c1c" keyPath="$PROJECT_DIR$/../.ssh/id_ed25519" port="22" nameFormat="DESCRIPTIVE" username="watskmt" useOpenSSHConfig="true" />
+    </configs>
+  </component>
+</project>
