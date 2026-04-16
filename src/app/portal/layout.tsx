@@ -57,6 +57,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
       {/* Bottom nav spacer */}
       <div className="h-20" />
+
+      <footer className="text-center text-xs text-slate-400 py-2 select-none">
+        © {new Date().getFullYear()} AM Tech (Wataru Sakamoto)
+      </footer>
     </div>
   );
 }
