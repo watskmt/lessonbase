@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { GraduationCap, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { signInWithEmail, resolveDemoCredentials } from "@/lib/auth";
 import Link from "next/link";
 
 export default function LoginPage() {
@@ -12,25 +13,36 @@ const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const demoCredentials = resolveDemoCredentials(
+    process.env.NEXT_PUBLIC_DEMO_EMAIL,
+    process.env.NEXT_PUBLIC_DEMO_PASSWORD
+  );
+  const demoEnabled = demoCredentials !== null;
+
+  const signIn = async (loginEmail: string, loginPassword: string) => {
     setLoading(true);
     setError("");
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const result = await signInWithEmail(supabase, loginEmail, loginPassword);
 
-    if (error) {
-      if (error.message === "Email not confirmed") {
-        setError("メールアドレスの確認が完了していません。登録時に送信した確認メールのリンクをクリックしてからログインしてください。");
-      } else {
-        setError("メールアドレスまたはパスワードが正しくありません");
-      }
+    if (!result.ok) {
+      setError(result.message);
       setLoading(false);
       return;
     }
 
     window.location.href = "/";
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await signIn(email, password);
+  };
+
+  const handleDemoLogin = async () => {
+    if (!demoCredentials) return;
+    await signIn(demoCredentials.email, demoCredentials.password);
   };
 
   return (
@@ -99,6 +111,24 @@ const [email, setEmail] = useState("");
               {loading ? "ログイン中..." : "ログイン"}
             </button>
           </form>
+
+          {demoEnabled && (
+            <>
+              <div className="flex items-center gap-3 my-5">
+                <div className="flex-1 h-px bg-slate-200" />
+                <span className="text-xs text-slate-400">または</span>
+                <div className="flex-1 h-px bg-slate-200" />
+              </div>
+              <button
+                type="button"
+                onClick={handleDemoLogin}
+                disabled={loading}
+                className="w-full bg-amber-500 text-white py-3 rounded-xl text-sm font-semibold hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? "ログイン中..." : "デモ版でログイン"}
+              </button>
+            </>
+          )}
 
           <p className="text-xs text-slate-400 text-center mt-5">
             アカウントをお持ちでない方は{" "}

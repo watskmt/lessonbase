@@ -3,9 +3,9 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
 export async function middleware(req: NextRequest) {
-  // HTTP → HTTPS リダイレクト
+  // HTTP → HTTPS リダイレクト（本番のみ。ローカル開発では http のまま使う）
   const proto = req.headers.get("x-forwarded-proto");
-  if (proto === "http") {
+  if (process.env.NODE_ENV === "production" && proto === "http") {
     const url = req.nextUrl.clone();
     url.protocol = "https:";
     return NextResponse.redirect(url, { status: 301 });

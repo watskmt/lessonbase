@@ -11,8 +11,10 @@ import {
   Bell,
   Settings,
   GraduationCap,
+  LogOut,
 } from "lucide-react";
 import clsx from "clsx";
+import { createClient } from "@/lib/supabase/client";
 
 const nav = [
   { href: "/", label: "ダッシュボード", icon: LayoutDashboard },
@@ -26,6 +28,12 @@ const nav = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
 
   return (
     <aside className="w-60 min-h-screen bg-white border-r border-slate-200 flex flex-col">
@@ -76,6 +84,13 @@ export default function Sidebar() {
             <p className="text-xs text-slate-400 truncate">オーナー</p>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-800 transition-colors"
+        >
+          <LogOut size={16} className="text-slate-400" />
+          ログアウト
+        </button>
       </div>
     </aside>
   );
