@@ -1,12 +1,13 @@
-name: Deploy to CoreServer
+name: Deploy to VPS
 
 on:
   push:
     branches:
       - main
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: true
 
 jobs:
   deploy:
@@ -19,7 +20,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22' # VPS の Node メジャーバージョンに合わせる
           cache: 'npm'
 
       - name: Install dependencies
@@ -35,6 +36,9 @@ jobs:
           NEXT_PUBLIC_APP_URL=${{ secrets.NEXT_PUBLIC_APP_URL }}
           PAYJP_WEBHOOK_SECRET=${{ secrets.PAYJP_WEBHOOK_SECRET }}
           CRON_SECRET=${{ secrets.CRON_SECRET }}
+          NEXT_PUBLIC_DEMO_MODE=${{ secrets.NEXT_PUBLIC_DEMO_MODE }}
+          NEXT_PUBLIC_DEMO_EMAIL=${{ secrets.NEXT_PUBLIC_DEMO_EMAIL }}
+          NEXT_PUBLIC_DEMO_PASSWORD=${{ secrets.NEXT_PUBLIC_DEMO_PASSWORD }}
           EOF
 
       - name: Build
@@ -43,51 +47,40 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.CORESERVER_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p ${{ secrets.CORESERVER_PORT || 22 }} ${{ secrets.CORESERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Create .htaccess
-        run: |
-          cat << 'EOF' > .htaccess
-          Options -MultiViews
-          RewriteEngine On
-          RewriteRule ^(.*)$ http://localhost:3000/$1 [P,L]
-          EOF
+          ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
-            -e "ssh -p ${{ secrets.CORESERVER_PORT || 22 }} -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
+            -e "ssh -p ${{ secrets.VPS_PORT || 22 }} -i ~/.ssh/id_rsa" \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='.next/cache' \
-            .htaccess \
             .next \
             public \
             package.json \
             package-lock.json \
             next.config.ts \
+            ecosystem.config.js \
             .env.local \
-            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }}:${{ secrets.CORESERVER_PATH }}/
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_PATH }}/
 
-      - name: Install production dependencies & restart
+      - name: Install production deps & reload PM2
         run: |
-          ssh -p ${{ secrets.CORESERVER_PORT || 22 }} \
+          ssh -p ${{ secrets.VPS_PORT || 22 }} \
             -i ~/.ssh/id_rsa \
-            -o StrictHostKeyChecking=no \
-            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} << 'EOF'
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
           set -e
-          NODE_HOME="$HOME/.nodejs"
-          if [ ! -x "$NODE_HOME/bin/node" ]; then
-            VER=$(curl -fsSL https://nodejs.org/dist/latest-v24.x/ | grep -oE 'node-v24\.[0-9]+\.[0-9]+-linux-x64' | head -1)
-            curl -fsSL "https://nodejs.org/dist/latest-v24.x/${VER}.tar.gz" | tar xz -C "$HOME"
-            mv "$HOME/${VER}" "$NODE_HOME"
-          fi
-          export PATH="$NODE_HOME/bin:$PATH"
-          npm install -g pm2 --no-fund --no-audit
-          cd ${{ secrets.CORESERVER_PATH }}
+          export PATH="/usr/local/bin:/usr/bin:$HOME/.npm-global/bin:$PATH"
+          cd ${{ secrets.VPS_PATH }}
           npm ci --omit=dev
-          pm2 kill 2>/dev/null || true
-          pm2 start npm --name lessonbase -- start
+          if pm2 describe lessonbase > /dev/null 2>&1; then
+            pm2 reload ecosystem.config.js --update-env
+          else
+            pm2 start ecosystem.config.js
+            pm2 save
+          fi
+          pm2 status
           EOF
