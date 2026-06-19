@@ -47,14 +47,14 @@ jobs:
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          echo "${{ secrets.CORESERVER_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -p ${{ secrets.VPS_PORT || 22 }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.CORESERVER_PORT || 22 }} ${{ secrets.CORESERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
-            -e "ssh -p ${{ secrets.VPS_PORT || 22 }} -i ~/.ssh/id_rsa" \
+            -e "ssh -p ${{ secrets.CORESERVER_PORT || 22 }} -i ~/.ssh/id_rsa" \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='.next/cache' \
@@ -65,16 +65,16 @@ jobs:
             next.config.ts \
             ecosystem.config.js \
             .env.local \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_PATH }}/
+            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }}:${{ secrets.CORESERVER_PATH }}/
 
       - name: Install production deps & reload PM2
         run: |
-          ssh -p ${{ secrets.VPS_PORT || 22 }} \
+          ssh -p ${{ secrets.CORESERVER_PORT || 22 }} \
             -i ~/.ssh/id_rsa \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
+            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} << 'EOF'
           set -e
           export PATH="/usr/local/bin:/usr/bin:$HOME/.npm-global/bin:$PATH"
-          cd ${{ secrets.VPS_PATH }}
+          cd ${{ secrets.CORESERVER_PATH }}
           npm ci --omit=dev
           if pm2 describe lessonbase > /dev/null 2>&1; then
             pm2 reload ecosystem.config.js --update-env
