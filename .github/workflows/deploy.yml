@@ -45,6 +45,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Prune devDependencies for production bundle
+        run: npm prune --omit=dev
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -55,11 +58,11 @@ jobs:
       - name: Deploy via rsync
         run: |
           rsync -avz --delete \
-            -e "ssh -p ${{ secrets.CORESERVER_PORT || 22 }} -i ~/.ssh/id_rsa" \
+            -e "ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 -p ${{ secrets.CORESERVER_PORT || 22 }} -i ~/.ssh/id_rsa" \
             --exclude='.git' \
-            --exclude='node_modules' \
             --exclude='.next/cache' \
             .next \
+            node_modules \
             public \
             package.json \
             package-lock.json \
@@ -68,16 +71,16 @@ jobs:
             .env.local \
             ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }}:${{ secrets.CORESERVER_PATH }}/
 
-      - name: Install production deps & reload PM2
+      - name: Restart PM2 on VPS
         run: |
-          ssh -p ${{ secrets.CORESERVER_PORT || 22 }} \
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            -p ${{ secrets.CORESERVER_PORT || 22 }} \
             -i ~/.ssh/id_rsa \
             ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} << 'EOF'
           set -e
           export PATH="/usr/local/bin:/usr/bin:$HOME/.npm-global/bin:$PATH"
           cd ${{ secrets.CORESERVER_PATH }}
-          npm ci --omit=dev
-          # reload だけでは停止・異常終了状態から復旧できないことがあるため、毎回起動し直す
+          # VPS 上での npm ci は低速・SSH 切断の原因になるため、CI で用意した node_modules を rsync する
           pm2 delete lessonbase 2>/dev/null || true
           pm2 start ecosystem.config.js
           pm2 save
@@ -86,7 +89,8 @@ jobs:
 
       - name: Verify app responds on VPS
         run: |
-          ssh -p ${{ secrets.CORESERVER_PORT || 22 }} \
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            -p ${{ secrets.CORESERVER_PORT || 22 }} \
             -i ~/.ssh/id_rsa \
             ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} << 'EOF'
           set -e
