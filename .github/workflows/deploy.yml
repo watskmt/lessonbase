@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 concurrency:
   group: deploy-vps
@@ -76,11 +77,28 @@ jobs:
           export PATH="/usr/local/bin:/usr/bin:$HOME/.npm-global/bin:$PATH"
           cd ${{ secrets.CORESERVER_PATH }}
           npm ci --omit=dev
-          if pm2 describe lessonbase > /dev/null 2>&1; then
-            pm2 reload ecosystem.config.js --update-env
-          else
-            pm2 start ecosystem.config.js
-            pm2 save
-          fi
+          # reload だけでは停止・異常終了状態から復旧できないことがあるため、毎回起動し直す
+          pm2 delete lessonbase 2>/dev/null || true
+          pm2 start ecosystem.config.js
+          pm2 save
           pm2 status
+          EOF
+
+      - name: Verify app responds on VPS
+        run: |
+          ssh -p ${{ secrets.CORESERVER_PORT || 22 }} \
+            -i ~/.ssh/id_rsa \
+            ${{ secrets.CORESERVER_USER }}@${{ secrets.CORESERVER_HOST }} << 'EOF'
+          set -e
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -fsS -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/login | grep -qE '^(200|301|302|307|308)$'; then
+              echo "OK: lessonbase responded on port 3000"
+              exit 0
+            fi
+            echo "Waiting for lessonbase ($i/10)..."
+            sleep 3
+          done
+          echo "lessonbase did not become healthy"
+          pm2 logs lessonbase --lines 50 --nostream || true
+          exit 1
           EOF

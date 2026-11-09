@@ -23,13 +23,10 @@ echo "=== ビルド ==="
 npm run build
 
 echo "=== PM2 で起動/再起動 ==="
-if pm2 describe lessonbase > /dev/null 2>&1; then
-    pm2 reload ecosystem.config.js --update-env
-else
-    pm2 start ecosystem.config.js
-    pm2 save
-    pm2 startup | tail -1 | bash  # OS 起動時に自動起動
-fi
+pm2 delete lessonbase 2>/dev/null || true
+pm2 start ecosystem.config.js
+pm2 save
+# 初回デプロイ時のみ pm2 startup を実行してください
 
 echo "=== デプロイ完了 ==="
 pm2 status
