@@ -16,11 +16,10 @@ else
     cd "$APP_DIR"
 fi
 
-echo "=== 依存パッケージインストール ==="
-npm ci --omit=dev
-
-echo "=== ビルド ==="
+echo "=== 依存パッケージインストール・ビルド ==="
+npm ci
 npm run build
+npm prune --omit=dev
 
 echo "=== PM2 で起動/再起動 ==="
 pm2 delete lessonbase 2>/dev/null || true
